@@ -1,6 +1,7 @@
 package com.raj.Ai_Based_Job_Portal.service.impl.impl;
 
 import com.raj.Ai_Based_Job_Portal.dto.ApplyJobRequestDto;
+import com.raj.Ai_Based_Job_Portal.dto.UpdateStatusDto;
 import com.raj.Ai_Based_Job_Portal.entity.Job;
 import com.raj.Ai_Based_Job_Portal.entity.JobApplication;
 import com.raj.Ai_Based_Job_Portal.entity.User;
@@ -51,5 +52,26 @@ public class ApplicationServiceImpl implements ApplicationService {
         List<JobApplication> allJobs = jobApplicationRepository.findByCandidate(candidate);
         if(allJobs==null) throw new RuntimeException("You haven't applied for any job yet!!!");
         return allJobs;
+    }
+
+    @Override
+    public List<JobApplication> getAllJobs() {
+        return jobApplicationRepository.findAll();
+    }
+
+    @Override
+    public JobApplication getJobById(Long id) {
+        return jobApplicationRepository.findById(id)
+                .orElseThrow(()-> new RuntimeException("No job found with the id "+ id));
+    }
+
+    @Override
+    public JobApplication updateStatus(Long id, UpdateStatusDto dto) {
+        JobApplication application = jobApplicationRepository.findById(id)
+                .orElseThrow(()-> new RuntimeException("No application found with id "+ id));
+        if(dto==null) throw new RuntimeException("Invalid input or status");
+        application.setStatus(dto.getStatus());
+        jobApplicationRepository.save(application);
+        return application;
     }
 }

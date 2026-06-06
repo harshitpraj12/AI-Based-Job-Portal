@@ -1,6 +1,7 @@
 package com.raj.Ai_Based_Job_Portal.controller;
 
 import com.raj.Ai_Based_Job_Portal.dto.ApplyJobRequestDto;
+import com.raj.Ai_Based_Job_Portal.dto.UpdateStatusDto;
 import com.raj.Ai_Based_Job_Portal.entity.JobApplication;
 import com.raj.Ai_Based_Job_Portal.entity.User;
 import com.raj.Ai_Based_Job_Portal.security.AuthenticatedUserService;
@@ -25,10 +26,25 @@ public class JobApplicationController {
         applicationService.applyJob(request);
         return ResponseEntity.ok("Job applied Successfully");
     }
-    @GetMapping("my-applications")
+    @GetMapping("/my-applications")
     @PreAuthorize("hasRole('CANDIDATE')")
-    public List<JobApplication> allJobs(){
+    public ResponseEntity<List<JobApplication>> allJobs(){
         User candidate = authenticatedUserService.getCurrentUser();
-        return applicationService.allAppliedJobs(candidate);
+        return ResponseEntity.ok(applicationService.allAppliedJobs(candidate));
+    }
+    @GetMapping("/job/all-job")
+    @PreAuthorize("hasRole('RECRUITER')")
+    public ResponseEntity<List<JobApplication>> allAppliedJobs(){
+        return ResponseEntity.ok(applicationService.getAllJobs());
+    }
+    @GetMapping("/job/{jobId}")
+    @PreAuthorize("hasRole('RECRUITER')")
+    public ResponseEntity<JobApplication> allAppliedJobs(@PathVariable("jobId") Long id){
+        return ResponseEntity.ok(applicationService.getJobById(id));
+    }
+    @PutMapping("/job/{id}/status")
+    @PreAuthorize("hasRole('RECRUITER')")
+    public ResponseEntity<JobApplication> updateJobStatus(@PathVariable("id") Long id, @RequestBody UpdateStatusDto dto){
+        return ResponseEntity.ok(applicationService.updateStatus(id, dto));
     }
 }
