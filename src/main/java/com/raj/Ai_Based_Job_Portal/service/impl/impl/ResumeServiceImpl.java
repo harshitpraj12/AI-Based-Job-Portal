@@ -12,6 +12,7 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
@@ -32,6 +33,11 @@ public class ResumeServiceImpl implements ResumeService {
     public void uploadResume(MultipartFile file) throws IOException {
         User candidate = authenticatedUserService.getCurrentUser();
         String fileName = System.currentTimeMillis()+"_"+file.getOriginalFilename();
+        String uploadDir = "uploads/";
+        File directory = new File(uploadDir);
+        if(!directory.exists()){
+            directory.mkdir();
+        }
         Path path = Paths.get("uploads", fileName);
         Files.copy(file.getInputStream(), path, StandardCopyOption.REPLACE_EXISTING);
         Resume resume = Resume.builder()
