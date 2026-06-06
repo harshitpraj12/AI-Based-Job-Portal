@@ -1,7 +1,9 @@
 package com.raj.Ai_Based_Job_Portal.controller;
 
+import com.raj.Ai_Based_Job_Portal.dto.ApplyJobRequestDto;
 import com.raj.Ai_Based_Job_Portal.dto.JobRequestDto;
 import com.raj.Ai_Based_Job_Portal.dto.JobResponseDto;
+import com.raj.Ai_Based_Job_Portal.service.impl.ApplicationService;
 import com.raj.Ai_Based_Job_Portal.service.impl.JobService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
