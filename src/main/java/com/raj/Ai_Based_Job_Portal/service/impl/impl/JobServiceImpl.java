@@ -42,4 +42,64 @@ public class JobServiceImpl implements JobService {
                 .skillsRequires(saveJob.getSkillRequirement())
                 .build();
     }
+
+    @Override
+    public java.util.List<JobResponseDto> getAllJobs() {
+        return jobRepository.findAll().stream()
+                .map(job -> JobResponseDto.builder()
+                        .id(job.getId())
+                        .title(job.getTitle())
+                        .companyName(job.getCompany() != null ? job.getCompany().getCompanyName() : null)
+                        .description(job.getDescription())
+                        .location(job.getLocation())
+                        .experience(job.getExperience())
+                        .salary(job.getSalary())
+                        .skillsRequires(job.getSkillRequirement())
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    @Override
+    public JobResponseDto getJobById(Long id) {
+        Job job = jobRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Job not found with id: " + id));
+        return JobResponseDto.builder()
+                .id(job.getId())
+                .title(job.getTitle())
+                .companyName(job.getCompany() != null ? job.getCompany().getCompanyName() : null)
+                .description(job.getDescription())
+                .location(job.getLocation())
+                .experience(job.getExperience())
+                .salary(job.getSalary())
+                .skillsRequires(job.getSkillRequirement())
+                .build();
+    }
+
+    @Override
+    public JobResponseDto updateJob(Long id, JobRequestDto request) {
+        Job job = jobRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Job not found with id: " + id));
+        Company company = companyRepository.findById(request.getCompanyId())
+                .orElseThrow(() -> new RuntimeException("Company Not found"));
+
+        job.setTitle(request.getTitle());
+        job.setDescription(request.getDescription());
+        job.setExperience(request.getExperience());
+        job.setCompany(company);
+        job.setLocation(request.getLocation());
+        job.setSkillRequirement(request.getSkillsRequires());
+        job.setSalary(request.getSalary());
+
+        Job updatedJob = jobRepository.save(job);
+        return JobResponseDto.builder()
+                .id(updatedJob.getId())
+                .title(updatedJob.getTitle())
+                .companyName(company.getCompanyName())
+                .description(updatedJob.getDescription())
+                .location(updatedJob.getLocation())
+                .experience(updatedJob.getExperience())
+                .salary(updatedJob.getSalary())
+                .skillsRequires(updatedJob.getSkillRequirement())
+                .build();
+    }
 }

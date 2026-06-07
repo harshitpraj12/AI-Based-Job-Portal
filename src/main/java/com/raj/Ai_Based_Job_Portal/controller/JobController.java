@@ -8,10 +8,9 @@ import com.raj.Ai_Based_Job_Portal.service.impl.JobService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/jobs")
@@ -23,5 +22,21 @@ public class JobController {
     @PreAuthorize("hasRole('RECRUITER')")
     public ResponseEntity<JobResponseDto> createJob(@RequestBody JobRequestDto request){
         return ResponseEntity.ok(jobService.createJob(request));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<JobResponseDto>> getAllJobs(){
+        return ResponseEntity.ok(jobService.getAllJobs());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<JobResponseDto> getJobById(@PathVariable("id") Long id){
+        return ResponseEntity.ok(jobService.getJobById(id));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('RECRUITER')")
+    public ResponseEntity<JobResponseDto> updateJob(@PathVariable("id") Long id, @RequestBody JobRequestDto request){
+        return ResponseEntity.ok(jobService.updateJob(id, request));
     }
 }

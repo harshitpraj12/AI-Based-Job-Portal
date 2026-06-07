@@ -10,5 +10,8 @@ public class ApplicantResponseDto {
     private String email;
     private String status;
     private Long candidateId;
-    private boolean resumeUploaded;
+    private Integer matchScore;
+    private String strengths;
+    private String missingSkills;
+    private String suggestions;
 }

@@ -14,6 +14,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class CompanyServiceImpl implements CompanyService {
@@ -39,6 +42,41 @@ public class CompanyServiceImpl implements CompanyService {
                 .description(saveCompany.getDescription())
                 .location(saveCompany.getLocation())
                 .website(saveCompany.getWebsite())
+                .build();
+    }
+
+    @Override
+    public List<CompanyResponseDto> getAllCompanies() {
+        List<Company> companies = companyRepository.findAll();
+        List<CompanyResponseDto> companyResponseDto = new ArrayList<>();
+        for(Company company : companies){
+            CompanyResponseDto dto = CompanyResponseDto.builder()
+                    .id(company.getId())
+                    .companyName(company.getCompanyName())
+                    .website(company.getWebsite())
+                    .location(company.getLocation())
+                    .description(company.getDescription())
+                    .build();
+            companyResponseDto.add(dto);
+        }
+        return companyResponseDto;
+    }
+
+    @Override
+    public CompanyResponseDto updateCompany(Long id, CompanyRequestDto request) {
+        Company company = companyRepository.findById(id)
+                .orElseThrow(()-> new RuntimeException("Company not found of id "+ id));
+        company.setCompanyName(request.getCompanyName());
+        company.setWebsite(request.getWebsite());
+        company.setLocation(request.getLocation());
+        company.setDescription(request.getDescription());
+        Company update = companyRepository.save(company);
+        return CompanyResponseDto.builder()
+                .description(update.getDescription())
+                .companyName(update.getCompanyName())
+                .location(update.getLocation())
+                .website(update.getWebsite())
+                .id(update.getId())
                 .build();
     }
 }
