@@ -268,6 +268,46 @@ export const mockRequest = async (method, url, data = null) => {
     return { data: applications };
   }
 
+  if (url.startsWith('/api/applications/jobs/') && method === 'get') {
+    const user = getCurrentMockUser();
+    if (user?.role !== 'RECRUITER') throw { response: { status: 403, data: { message: 'Access denied' } } };
+
+    const jobId = parseInt(url.split('/').pop());
+    const filteredApps = applications.filter(a => a.jobId === jobId || a.job?.id === jobId);
+
+    const dtos = filteredApps.map(app => {
+      const cId = app.candidateId || app.candidate?.id;
+      const candUser = users.find(u => u.id === cId);
+      const email = candUser ? candUser.email : (app.candidate?.email || 'email@jobportal.com');
+      const name = candUser ? candUser.name : (app.candidateName || app.candidate?.name || 'Candidate');
+
+      const matchScore = (cId === 2) ? 85 : Math.floor(60 + Math.random() * 35);
+      const strengths = (cId === 2) 
+        ? "Excellent knowledge of React, Tailwind CSS, TypeScript, and modern UI micro-animations."
+        : "Good command of programming fundamentals and frontend layout structuring.";
+      const missingSkills = (cId === 2)
+        ? "Docker, Node.js backend optimization."
+        : "Next.js, Framer Motion, TypeScript typing rules.";
+      const suggestions = (cId === 2)
+        ? "Build a backend microservice using Node.js to complement frontend proficiency."
+        : "Implement a project utilizing Framer Motion and TypeScript to learn advanced transitions.";
+
+      return {
+        id: app.id,
+        candidateId: cId,
+        candidateName: name,
+        email: email,
+        status: app.status,
+        matchScore: matchScore,
+        strengths: strengths,
+        missingSkills: missingSkills,
+        suggestions: suggestions
+      };
+    });
+
+    return { data: dtos };
+  }
+
   if (url.startsWith('/api/applications/job/') && method === 'get') {
     const id = parseInt(url.split('/').pop());
     const app = applications.find(a => a.id === id);

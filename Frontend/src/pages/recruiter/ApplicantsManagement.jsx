@@ -46,10 +46,14 @@ const ApplicantsManagement = () => {
   const [resumeFileName, setResumeFileName] = useState('');
   const [loadingResume, setLoadingResume] = useState(false);
   const [candidateProfile, setCandidateProfile] = useState(null);
+  const [selectedApp, setSelectedApp] = useState(null);
+  const [activeTab, setActiveTab] = useState('profile'); // 'profile', 'ai', 'cv'
 
   const fetchApplications = async () => {
     try {
-      const data = await applicationService.getAllApplications();
+      const data = filterJobId
+        ? await applicationService.getApplicantsByJob(filterJobId)
+        : await applicationService.getAllApplications();
       setApplications(data);
 
       // Load mock resume metadata for each applicant
@@ -97,10 +101,15 @@ const ApplicantsManagement = () => {
   };
 
   // Preview & Download Modal opening
-  const handleViewResume = async (candId, name, email) => {
+  const handleViewResume = async (app) => {
+    const candId = app.candidateId || app.candidate?.id;
+    const name = app.candidate?.name || app.candidateName || 'Candidate';
+    const email = app.candidate?.email || 'email@jobportal.com';
+    setSelectedApp(app);
     setSelectedCandidateId(candId);
     setSelectedCandidateName(name);
     setSelectedCandidateEmail(email);
+    setActiveTab('profile');
     setPreviewOpen(true);
     setLoadingResume(true);
     setResumeBlob(null);
@@ -113,15 +122,13 @@ const ApplicantsManagement = () => {
       if (cachedProfile) {
         setCandidateProfile(JSON.parse(cachedProfile));
       } else {
-        // Generate personalized defaults to prevent showing Jane Doe details under other candidates
-        const slug = name.toLowerCase().replace(/\s+/g, '');
         setCandidateProfile({
-          phone: '+1 (555) 019-' + Math.floor(1000 + Math.random() * 9000),
-          education: [{ id: 1, degree: 'B.S. in Computer Science', school: 'University of Technology', startYear: '2020', endYear: '2024' }],
-          experience: 'Software Engineering Intern',
-          github: `https://github.com/${slug}`,
-          linkedin: `https://linkedin.com/in/${slug}`,
-          skills: ['React', 'TypeScript', 'Tailwind CSS', 'Node.js'],
+          phone: '',
+          education: [],
+          experience: '',
+          github: '',
+          linkedin: '',
+          skills: [],
           profilePhoto: ''
         });
       }
@@ -164,12 +171,11 @@ const ApplicantsManagement = () => {
     setResumeBlobUrl('');
     setResumeBlob(null);
     setCandidateProfile(null);
+    setSelectedApp(null);
   };
 
   // Filter application list by jobId if query parameter exists
-  const displayedApps = filterJobId 
-    ? applications.filter(a => a.jobId === parseInt(filterJobId) || a.job?.id === parseInt(filterJobId))
-    : applications;
+  const displayedApps = applications;
 
   const statusColors = {
     APPLIED: 'text-amber-700 bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30',
@@ -238,6 +244,7 @@ const ApplicantsManagement = () => {
                   <th className="px-6 py-4">Candidate Name</th>
                   <th className="px-6 py-4">Position Applied</th>
                   <th className="px-6 py-4">Resume CV</th>
+                  <th className="px-6 py-4">AI Match Score</th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
@@ -266,7 +273,7 @@ const ApplicantsManagement = () => {
                       <td className="px-6 py-4">
                         {resume ? (
                           <button
-                            onClick={() => handleViewResume(candId, candName, candEmail)}
+                            onClick={() => handleViewResume(app)}
                             className="inline-flex items-center space-x-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
                           >
                             <FileText className="h-4 w-4 text-indigo-500" />
@@ -274,6 +281,23 @@ const ApplicantsManagement = () => {
                           </button>
                         ) : (
                           <span className="text-xs text-gray-400">No CV Uploaded</span>
+                        )}
+                      </td>
+
+                      {/* AI Match Score */}
+                      <td className="px-6 py-4">
+                        {app.matchScore !== undefined ? (
+                          <span className={`inline-flex items-center justify-center rounded-xl px-2.5 py-1 text-xs font-bold border ${
+                            app.matchScore >= 80 
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-250 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30' 
+                              : app.matchScore >= 60 
+                                ? 'bg-amber-50 text-amber-700 border-amber-250 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30' 
+                                : 'bg-red-50 text-red-700 border-red-250 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30'
+                          }`}>
+                            {app.matchScore}%
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">Not analyzed</span>
                         )}
                       </td>
 
@@ -330,34 +354,145 @@ const ApplicantsManagement = () => {
               {/* Header */}
               <div className="flex items-center justify-between border-b pb-4 mb-4 dark:border-slate-800">
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Candidate CV Document</h3>
-                  <p className="text-xs text-gray-400 mt-0.5">Applicant Name: <span className="font-bold text-indigo-600 dark:text-indigo-400">{selectedCandidateName}</span></p>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Applicant Review Dashboard</h3>
+                  <p className="text-xs text-gray-400 mt-0.5">Candidate: <span className="font-bold text-indigo-600 dark:text-indigo-400">{selectedCandidateName}</span></p>
                 </div>
                 <button onClick={handleClosePreview} className="p-1 rounded-lg hover:bg-gray-150 dark:hover:bg-slate-800 transition cursor-pointer">
                   <X className="h-6 w-6 text-gray-400 hover:text-gray-600" />
                 </button>
               </div>
 
+              {/* Tabs */}
+              <div className="flex border-b dark:border-slate-800 mb-4">
+                <button
+                  onClick={() => setActiveTab('profile')}
+                  className={`px-4 py-2 text-xs font-bold border-b-2 transition-colors cursor-pointer ${
+                    activeTab === 'profile'
+                      ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  Candidate Profile
+                </button>
+                <button
+                  onClick={() => setActiveTab('ai')}
+                  className={`px-4 py-2 text-xs font-bold border-b-2 transition-colors cursor-pointer flex items-center space-x-1.5 ${
+                    activeTab === 'ai'
+                      ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <span>AI Resume Score</span>
+                  {selectedApp?.matchScore !== undefined && (
+                    <span className="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-400 px-1.5 py-0.5 rounded-md text-[10px] font-extrabold">
+                      {selectedApp.matchScore}%
+                    </span>
+                  )}
+                </button>
+                <button
+                  onClick={() => setActiveTab('cv')}
+                  className={`px-4 py-2 text-xs font-bold border-b-2 transition-colors cursor-pointer ${
+                    activeTab === 'cv'
+                      ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  Original CV File
+                </button>
+              </div>
+
               {/* Preview Body */}
-              <div className="flex-1 overflow-y-auto min-h-[350px] max-h-[500px] border border-gray-150 rounded-xl bg-gray-50/50 p-4 dark:border-slate-850 dark:bg-slate-950/40">
-                {loadingResume ? (
-                  <div className="h-full flex flex-col items-center justify-center space-y-3 py-16">
-                    <span className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent"></span>
-                    <span className="text-xs text-gray-500 font-semibold">Retrieving CV Document...</span>
+              <div className="flex-1 overflow-y-auto min-h-[380px] max-h-[500px] border border-gray-150 rounded-xl bg-gray-50/50 p-4 dark:border-slate-850 dark:bg-slate-950/40">
+                {activeTab === 'cv' ? (
+                  loadingResume ? (
+                    <div className="h-full flex flex-col items-center justify-center space-y-3 py-16">
+                      <span className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent"></span>
+                      <span className="text-xs text-gray-500 font-semibold">Retrieving CV Document...</span>
+                    </div>
+                  ) : resumeBlobUrl ? (
+                    <iframe 
+                      src={resumeBlobUrl} 
+                      title="Resume Preview" 
+                      className="w-full h-[450px] rounded-lg border-none"
+                    />
+                  ) : (
+                    <div className="text-center py-16 text-gray-500 text-xs">
+                      No CV file content preview is available. You can download the file using the footer action.
+                    </div>
+                  )
+                ) : activeTab === 'ai' ? (
+                  /* AI Evaluation tab contents */
+                  <div className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-6 text-left">
+                    <div className="flex items-center justify-between border-b pb-4 dark:border-slate-800">
+                      <div>
+                        <h4 className="text-base font-bold text-gray-900 dark:text-white">Ollama AI Resume Report</h4>
+                        <p className="text-[11px] text-gray-400 mt-0.5">Automated screening metrics powered by llama3.2</p>
+                      </div>
+                      {selectedApp?.matchScore !== undefined && (
+                        <span className={`inline-flex items-center justify-center rounded-xl px-3 py-1.5 text-sm font-extrabold border ${
+                          selectedApp.matchScore >= 80 
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-250 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30' 
+                            : selectedApp.matchScore >= 60 
+                              ? 'bg-amber-50 text-amber-700 border-amber-250 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30' 
+                              : 'bg-red-50 text-red-700 border-red-250 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30'
+                        }`}>
+                          Match Score: {selectedApp.matchScore}%
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Progress Bar */}
+                    {selectedApp?.matchScore !== undefined && (
+                      <div className="space-y-1.5">
+                        <div className="w-full bg-gray-100 rounded-full h-2.5 dark:bg-slate-800">
+                          <div 
+                            className={`h-2.5 rounded-full transition-all ${
+                              selectedApp.matchScore >= 80 ? 'bg-emerald-600' : selectedApp.matchScore >= 60 ? 'bg-amber-500' : 'bg-red-500'
+                            }`}
+                            style={{ width: `${selectedApp.matchScore}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Strengths */}
+                    <div className="space-y-2">
+                      <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wide">Identified Key Strengths</h5>
+                      <p className="text-xs leading-relaxed text-gray-750 dark:text-gray-300 bg-emerald-50/20 border border-emerald-100/50 p-3.5 rounded-xl whitespace-pre-line">
+                        {selectedApp?.strengths || "No strengths mapped."}
+                      </p>
+                    </div>
+
+                    {/* Missing Skills */}
+                    <div className="space-y-2">
+                      <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wide">Missing Core Skills</h5>
+                      <div className="bg-red-50/10 border border-red-100/50 p-3.5 rounded-xl">
+                        {selectedApp?.missingSkills ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {selectedApp.missingSkills.split(',').map(skill => (
+                              <span key={skill} className="text-[10px] font-bold bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400 px-2 py-0.5 rounded-md border border-red-100/30 dark:border-red-900/30">
+                                {skill.trim()}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-500 italic">None identified</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Suggestions */}
+                    <div className="space-y-2">
+                      <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wide">Development Suggestions</h5>
+                      <p className="text-xs leading-relaxed text-gray-750 dark:text-gray-300 bg-indigo-50/25 border border-indigo-100/50 p-3.5 rounded-xl whitespace-pre-line">
+                        {selectedApp?.suggestions || "No recommendations generated."}
+                      </p>
+                    </div>
                   </div>
-                ) : resumeBlobUrl ? (
-                  // PDF Blob display
-                  <iframe 
-                    src={resumeBlobUrl} 
-                    title="Resume Preview" 
-                    className="w-full h-[450px] rounded-lg border-none"
-                  />
                 ) : (
-                  // Elegant visual candidate profile template as preview fallback (for mock mode / txt files)
+                  /* Profile Details tab contents (only user-provided, no dummy placeholders) */
                   <div className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-6 max-w-2xl mx-auto text-left">
                     <div className="flex flex-col sm:flex-row items-center justify-between pb-6 border-b dark:border-slate-850">
-                      
-                      {/* Name & Photo */}
                       <div className="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-4">
                         {candidateProfile?.profilePhoto ? (
                           <img 
@@ -372,40 +507,41 @@ const ApplicantsManagement = () => {
                         )}
                         <div className="text-center sm:text-left">
                           <h4 className="text-xl font-bold text-gray-900 dark:text-white">{selectedCandidateName}</h4>
-                          <span className="inline-flex rounded-full bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-400 text-[10px] font-bold px-2 py-0.5 mt-1 border border-indigo-100 dark:border-indigo-900/50">Candidate Professional</span>
+                          <span className="inline-flex rounded-full bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-400 text-[10px] font-bold px-2 py-0.5 mt-1 border border-indigo-100 dark:border-indigo-900/50">Candidate Profile</span>
                         </div>
                       </div>
 
-                      {/* Contact metadata */}
                       <div className="text-xs text-gray-500 mt-4 sm:mt-0 space-y-1 text-center sm:text-right">
                         <p className="flex items-center justify-center sm:justify-end space-x-1.5"><Mail className="h-3.5 w-3.5" /> <span>{selectedCandidateEmail}</span></p>
-                        <p className="flex items-center justify-center sm:justify-end space-x-1.5"><Phone className="h-3.5 w-3.5" /> <span>{candidateProfile?.phone || '+1 (555) 019-2834'}</span></p>
+                        <p className="flex items-center justify-center sm:justify-end space-x-1.5 font-semibold">
+                          <Phone className="h-3.5 w-3.5 text-gray-400" /> 
+                          <span>{candidateProfile?.phone || <span className="text-gray-450 font-normal italic">Not Provided</span>}</span>
+                        </p>
                       </div>
-
                     </div>
 
                     {/* Social profiles */}
                     <div className="grid grid-cols-2 gap-4 border-b pb-4 dark:border-slate-850">
                       <div>
-                        <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wide">LinkedIn</span>
+                        <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wide mb-1">LinkedIn</span>
                         {candidateProfile?.linkedin ? (
-                          <a href={candidateProfile.linkedin} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center space-x-1 mt-0.5">
+                          <a href={candidateProfile.linkedin} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center space-x-1">
                             <LinkedinIcon className="h-3.5 w-3.5 shrink-0" />
                             <span className="truncate max-w-[150px]">{candidateProfile.linkedin}</span>
                           </a>
                         ) : (
-                          <span className="text-xs text-gray-400">Not Provided</span>
+                          <span className="text-xs text-gray-400 italic">Not Provided</span>
                         )}
                       </div>
                       <div>
-                        <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wide">GitHub</span>
+                        <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wide mb-1">GitHub</span>
                         {candidateProfile?.github ? (
-                          <a href={candidateProfile.github} target="_blank" rel="noreferrer" className="text-xs text-gray-700 dark:text-gray-300 hover:underline flex items-center space-x-1 mt-0.5">
+                          <a href={candidateProfile.github} target="_blank" rel="noreferrer" className="text-xs text-gray-700 dark:text-gray-300 hover:underline flex items-center space-x-1">
                             <GithubIcon className="h-3.5 w-3.5 shrink-0" />
                             <span className="truncate max-w-[150px]">{candidateProfile.github}</span>
                           </a>
                         ) : (
-                          <span className="text-xs text-gray-400">Not Provided</span>
+                          <span className="text-xs text-gray-400 italic">Not Provided</span>
                         )}
                       </div>
                     </div>
@@ -417,15 +553,15 @@ const ApplicantsManagement = () => {
                         <span>Education background</span>
                       </h5>
                       <div className="space-y-3">
-                        {candidateProfile && Array.isArray(candidateProfile.education) ? (
+                        {candidateProfile && Array.isArray(candidateProfile.education) && candidateProfile.education.length > 0 && candidateProfile.education[0].school ? (
                           candidateProfile.education.map((edu, index) => (
                             <div key={edu.id || index} className="pl-4 border-l-2 border-indigo-100 dark:border-slate-800 text-xs">
-                              <p className="font-bold text-gray-900 dark:text-white">{edu.degree || 'Degree Not Mentioned'}</p>
-                              <p className="text-gray-500 mt-0.5">{edu.school || 'School Not Mentioned'} {edu.startYear && `(${edu.startYear} - ${edu.endYear})`}</p>
+                              <p className="font-bold text-gray-900 dark:text-white">{edu.degree || <span className="text-gray-400 italic">No Degree Specified</span>}</p>
+                              <p className="text-gray-500 mt-0.5">{edu.school} {edu.startYear && `(${edu.startYear} - ${edu.endYear})`}</p>
                             </div>
                           ))
                         ) : (
-                          <p className="text-xs text-gray-500">{candidateProfile?.education || 'No details provided.'}</p>
+                          <p className="text-xs text-gray-400 italic">Not Provided</p>
                         )}
                       </div>
                     </div>
@@ -437,7 +573,7 @@ const ApplicantsManagement = () => {
                         <span>Professional experience</span>
                       </h5>
                       <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-slate-950/60 p-3 rounded-xl">
-                        {candidateProfile?.experience || 'No experience details specified.'}
+                        {candidateProfile?.experience || <span className="text-gray-450 italic">Not Provided</span>}
                       </p>
                     </div>
 
@@ -445,18 +581,17 @@ const ApplicantsManagement = () => {
                     <div>
                       <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Technical skills</h5>
                       <div className="flex flex-wrap gap-2">
-                        {candidateProfile && Array.isArray(candidateProfile.skills) ? (
+                        {candidateProfile && Array.isArray(candidateProfile.skills) && candidateProfile.skills.length > 0 ? (
                           candidateProfile.skills.map(skill => (
                             <span key={skill} className="text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400 px-2.5 py-1 rounded-lg border border-indigo-100/40 dark:border-indigo-900/40">
                               {skill}
                             </span>
                           ))
                         ) : (
-                          <span className="text-xs text-gray-400">None Specified</span>
+                          <span className="text-xs text-gray-400 italic">Not Provided</span>
                         )}
                       </div>
                     </div>
-
                   </div>
                 )}
               </div>

@@ -176,5 +176,10 @@ export const applicationService = {
       if (match) fileName = match[1];
     }
     return { blob: response.data, fileName };
+  },
+
+  getApplicantsByJob: async (jobId) => {
+    const res = await apiRequest('get', `/api/applications/jobs/${jobId}`);
+    return res.data;
   }
 };

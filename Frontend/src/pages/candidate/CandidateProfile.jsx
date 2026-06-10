@@ -52,14 +52,14 @@ const CandidateProfile = () => {
       }
     }
     return {
-      phone: '+1 (555) 019-2834',
+      phone: '',
       education: [
-        { id: 1, degree: 'B.S. in Computer Science', school: 'Stanford University', startYear: '2020', endYear: '2024' }
+        { id: Date.now(), degree: '', school: '', startYear: '', endYear: '' }
       ],
-      experience: 'Frontend Engineering Intern at Stripe (Summer 2023)',
-      github: 'https://github.com/janedoe',
-      linkedin: 'https://linkedin.com/in/janedoe',
-      skills: ['React', 'TypeScript', 'Tailwind CSS', 'Figma', 'Node.js'],
+      experience: '',
+      github: '',
+      linkedin: '',
+      skills: [],
       profilePhoto: ''
     };
   });
