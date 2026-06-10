@@ -23,6 +23,7 @@ public class CompanyController {
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('RECRUITER')")
     public ResponseEntity<List<CompanyResponseDto>> getAllCompanies(){
         return ResponseEntity.ok(companyService.getAllCompanies());
     }

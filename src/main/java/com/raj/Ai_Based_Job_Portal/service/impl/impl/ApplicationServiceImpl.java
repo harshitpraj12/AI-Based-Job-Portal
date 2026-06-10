@@ -11,6 +11,8 @@ import com.raj.Ai_Based_Job_Portal.security.AuthenticatedUserService;
 import com.raj.Ai_Based_Job_Portal.service.impl.AiResumeService;
 import com.raj.Ai_Based_Job_Portal.service.impl.ApplicationService;
 import com.raj.Ai_Based_Job_Portal.service.impl.PdfService;
+import com.raj.Ai_Based_Job_Portal.service.impl.EmailService;
+import com.raj.Ai_Based_Job_Portal.service.impl.CreateMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -32,6 +34,8 @@ public class ApplicationServiceImpl implements ApplicationService {
     private final PdfService pdfService;
     private final AiResumeService aiResumeService;
     private final ResumeAnalysisRepository resumeAnalysisRepository;
+    private final EmailService emailService;
+    private final CreateMessage createMessage;
 
     @Override
     public void applyJob(ApplyJobRequestDto request) throws IOException {
@@ -88,9 +92,46 @@ public class ApplicationServiceImpl implements ApplicationService {
         JobApplication application = jobApplicationRepository.findById(id)
                 .orElseThrow(()-> new RuntimeException("No application found with id "+ id));
         if(dto==null) throw new RuntimeException("Invalid input or status");
-        application.setStatus(dto.getStatus());
-        jobApplicationRepository.save(application);
-        return application;
+        User recruiter = authenticatedUserService.getCurrentUser();
+        Job job = application.getJob();
+        if(!job.getCompany().getRecruiter().getId().equals(recruiter.getId())){
+            throw new RuntimeException("Unauthorized access");
+        }
+        
+        ApplicationStatus oldStatus = application.getStatus();
+        ApplicationStatus newStatus = dto.getStatus();
+        
+        application.setStatus(newStatus);
+        JobApplication savedApplication = jobApplicationRepository.save(application);
+        
+        if (oldStatus != newStatus) {
+            try {
+                String toEmail = application.getCandidate().getEmail();
+                String companyName = job.getCompany() != null ? job.getCompany().getCompanyName() : "Our Company";
+                String subject = "Application Update: " + job.getTitle() + " at " + companyName;
+                
+                if (newStatus == ApplicationStatus.SHORTLISTED) {
+                    System.out.println("Shortlisted");
+                    subject = "Shortlisted for " + job.getTitle() + " at " + companyName;
+                } else if (newStatus == ApplicationStatus.HIRED) {
+                    System.out.println("Rejected");
+                    subject = "Job Offer: " + job.getTitle() + " at " + companyName;
+                } else if (newStatus == ApplicationStatus.REJECTED) {
+                    System.out.println("Rejecter");
+                    subject = "Update on your application for " + job.getTitle();
+                }
+                
+                String message = createMessage.createStatusUpdateMessage(savedApplication);
+                if (message != null) {
+                    System.out.println(message);
+                    emailService.sendEmailInHtml(toEmail, subject, message);
+                }
+            } catch (Exception e) {
+                System.err.println("Failed to send status update email: " + e.getMessage());
+            }
+        }
+        
+        return savedApplication;
     }
 
     @Override
