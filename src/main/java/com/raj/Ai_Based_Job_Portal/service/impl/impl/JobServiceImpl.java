@@ -7,7 +7,11 @@ import com.raj.Ai_Based_Job_Portal.entity.Job;
 import com.raj.Ai_Based_Job_Portal.repository.CompanyRepository;
 import com.raj.Ai_Based_Job_Portal.repository.JobRepository;
 import com.raj.Ai_Based_Job_Portal.service.impl.JobService;
+import com.raj.Ai_Based_Job_Portal.specification.JobSpecification;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -16,6 +20,7 @@ public class JobServiceImpl implements JobService {
 
     private final JobRepository jobRepository;
     private final CompanyRepository companyRepository;
+    private final JobSpecification jobSpecification;
 
     @Override
     public JobResponseDto createJob(JobRequestDto request) {
@@ -101,5 +106,39 @@ public class JobServiceImpl implements JobService {
                 .salary(updatedJob.getSalary())
                 .skillsRequires(updatedJob.getSkillRequirement())
                 .build();
+    }
+
+    @Override
+    public Page<JobResponseDto> searchJobs(
+            String keyword,
+            String location,
+            int page,
+            int size
+    ) {
+        Specification<Job> specification = Specification
+                .where(
+                        JobSpecification
+                                .hasKeyword(keyword)
+                )
+                .and(
+                        JobSpecification
+                                .hasLocation(location)
+                );
+        Page<Job> jobs = jobRepository.findAll(
+                specification, PageRequest.of(page, size)
+        );
+        return  jobs.map(job ->
+                    JobResponseDto.builder()
+                            .id(job.getId())
+                            .title(job.getTitle())
+                            .skillsRequires(job.getSkillRequirement())
+                            .salary(job.getSalary())
+                            .experience(job.getExperience())
+                            .location(job.getLocation())
+                            .description(job.getDescription())
+                            .companyName(job.getCompany().getCompanyName())
+                            .build()
+                );
+
     }
 }

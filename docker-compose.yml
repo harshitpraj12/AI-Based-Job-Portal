@@ -1,0 +1,15 @@
+services:
+  mysql:
+    image: mysql:latest
+    environment:
+      MYSQL_ROOT_USERNAME: root
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: jobportal
+    ports:
+      - "3307:3306"
+  app:
+    build: .
+    ports:
+      - "8081:8080"
+    depends_on:
+      - mysql
