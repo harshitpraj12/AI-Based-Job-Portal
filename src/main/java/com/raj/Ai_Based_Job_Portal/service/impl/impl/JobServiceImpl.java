@@ -5,6 +5,7 @@ import com.raj.Ai_Based_Job_Portal.dto.JobResponseDto;
 import com.raj.Ai_Based_Job_Portal.entity.Company;
 import com.raj.Ai_Based_Job_Portal.entity.Job;
 import com.raj.Ai_Based_Job_Portal.repository.CompanyRepository;
+import com.raj.Ai_Based_Job_Portal.repository.JobApplicationRepository;
 import com.raj.Ai_Based_Job_Portal.repository.JobRepository;
 import com.raj.Ai_Based_Job_Portal.service.impl.JobService;
 import com.raj.Ai_Based_Job_Portal.specification.JobSpecification;
@@ -21,6 +22,7 @@ public class JobServiceImpl implements JobService {
     private final JobRepository jobRepository;
     private final CompanyRepository companyRepository;
     private final JobSpecification jobSpecification;
+    private final JobApplicationRepository jobApplicationRepository;
 
     @Override
     public JobResponseDto createJob(JobRequestDto request) {
@@ -144,6 +146,8 @@ public class JobServiceImpl implements JobService {
 
     @Override
     public String deleteJob(Long id) {
+        Job job = jobRepository.findById(id).orElseThrow();
+        jobApplicationRepository.findByJob(job);
         jobRepository.deleteById(id);
         return "Job deleted Successfully";
     }
