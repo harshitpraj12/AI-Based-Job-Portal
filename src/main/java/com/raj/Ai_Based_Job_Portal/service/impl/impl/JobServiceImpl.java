@@ -141,4 +141,10 @@ public class JobServiceImpl implements JobService {
                 );
 
     }
+
+    @Override
+    public String deleteJob(Long id) {
+        jobRepository.deleteById(id);
+        return "Job deleted Successfully";
+    }
 }

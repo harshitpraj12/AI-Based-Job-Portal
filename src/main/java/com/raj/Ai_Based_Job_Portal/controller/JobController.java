@@ -35,6 +35,12 @@ public class JobController {
         return ResponseEntity.ok(jobService.getJobById(id));
     }
 
+    @DeleteMapping("/delete/{id}")
+    @PreAuthorize("hasRole('RECRUITER')")
+    public ResponseEntity<String> deleteJobById(@PathVariable Long id){
+        return ResponseEntity.ok(jobService.deleteJob(id));
+    }
+
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('RECRUITER')")
     public ResponseEntity<JobResponseDto> updateJob(@PathVariable("id") Long id, @RequestBody JobRequestDto request){
