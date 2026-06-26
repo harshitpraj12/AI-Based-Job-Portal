@@ -24,6 +24,9 @@ public class Resume {
 
     private Long fileSize;
 
+    @Column(columnDefinition = "LONGTEXT")
+    private String parsedContent;
+
     @OneToOne
     @JoinColumn(name = "candidate_id")
     private User candidate;

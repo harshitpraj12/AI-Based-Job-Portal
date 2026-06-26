@@ -8,19 +8,28 @@ import com.raj.Ai_Based_Job_Portal.service.impl.ResumeFeedbackService;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
-import tools.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.SearchRequest;
+import com.raj.Ai_Based_Job_Portal.repository.JobRepository;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class ResumeFeedbackServiceImpl implements ResumeFeedbackService {
 
     private final ChatClient chatClient;
     private final ObjectMapper objectMapper;
+    private final VectorStore vectorStore;
+    private final JobRepository jobRepository;
 
-    public ResumeFeedbackServiceImpl(ChatClient.Builder chatClient, ObjectMapper objectMapper){
+    public ResumeFeedbackServiceImpl(ChatClient.Builder chatClient, ObjectMapper objectMapper, VectorStore vectorStore, JobRepository jobRepository){
         this.chatClient = chatClient.build();
         this.objectMapper = objectMapper;
+        this.vectorStore = vectorStore;
+        this.jobRepository = jobRepository;
     }
 
     @Override
@@ -34,15 +43,6 @@ public class ResumeFeedbackServiceImpl implements ResumeFeedbackService {
             Analyze this resume text:
 
             %s
-
-            Return ONLY JSON like this.
-
-            {
-                "overallScore":85,
-                "strength":["...","...","...","...","..."],
-                "weakness":["...", "...", "...","...","..."],
-                "suggessions":["...","...", "...","...","..."]
-            }
             """
                 .formatted(resumeText);
         System.out.println("This is prompt : "+ prompt);
@@ -108,15 +108,6 @@ public class ResumeFeedbackServiceImpl implements ResumeFeedbackService {
             10 Technical Questions
             5 HR Questions
             5 Coding Questions
-
-            Return ONLY JSON.
-
-            {
-              "technicalQuestions":[...],
-              "hrQuestions":[...],
-              "codingQuestions":[...]
-            }
-            
             """
                 .formatted(
                         jobTitle,
@@ -132,11 +123,18 @@ public class ResumeFeedbackServiceImpl implements ResumeFeedbackService {
     }
 
     @Override
-    public List<JobRecommendationDto> recommendJobs(String resumeText, List<Job> jobs) {
+    public List<JobRecommendationDto> recommendJobs(String resumeText) {
+        // Step 1: Perform Vector Search to find Top 5 matching jobs based on Resume Text
+        List<Document> matchingDocuments = vectorStore.similaritySearch(SearchRequest.query(resumeText).withTopK(5));
+        
+        List<Long> jobIds = matchingDocuments.stream()
+                .map(doc -> Long.valueOf(doc.getMetadata().get("jobId").toString()))
+                .collect(Collectors.toList());
+
+        List<Job> topJobs = jobRepository.findAllById(jobIds);
+        
         StringBuilder jobsText = new StringBuilder();
-
-        for(Job job : jobs){
-
+        for(Job job : topJobs){
             jobsText.append(
                     """
                     Job ID: %d
@@ -155,40 +153,25 @@ public class ResumeFeedbackServiceImpl implements ResumeFeedbackService {
                             )
             );
         }
+
         String prompt =
                 """
-                
                 You are an AI recruitment assistant.
         
                 Candidate Resume:
-        
                 %s
         
-                Available Jobs:
-        
+                Available Matching Jobs:
                 %s
         
-                Analyze the resume.
-        
-                Return top 5 matching jobs.
-        
-                Return ONLY JSON:
-        
-                [
-                  {
-                    "jobId":1,
-                    "jobTitle":"Java Developer",
-                    "company":"ABC",
-                    "matchScore":90,
-                    "reason":"Strong Java match"
-                  }
-                ]
-                
+                Analyze the resume against these specific jobs.
+                Return ONLY the matching jobs from this list with a match score and reason.
                 """
                         .formatted(
                                 resumeText,
                                 jobsText
                         );
+
         return chatClient.prompt()
                 .user(prompt)
                 .call()

@@ -11,6 +11,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import com.raj.Ai_Based_Job_Portal.service.impl.PdfService;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,6 +29,7 @@ public class ResumeServiceImpl implements ResumeService {
     private final ResumeRepository resumeRepository;
     private final UserRepository userRepository;
     private final AuthenticatedUserService authenticatedUserService;
+    private final PdfService pdfService;
 
     @Override
     public void uploadResume(MultipartFile file) throws IOException {
@@ -40,11 +42,19 @@ public class ResumeServiceImpl implements ResumeService {
         }
         Path path = Paths.get("uploads", fileName);
         Files.copy(file.getInputStream(), path, StandardCopyOption.REPLACE_EXISTING);
+        String extractedText = "";
+        try {
+            extractedText = pdfService.extractText(path.toString());
+        } catch (Exception e) {
+            extractedText = "Failed to parse PDF content.";
+        }
+
         Resume resume = Resume.builder()
                 .fileName(fileName)
                 .filePath(path.toString())
                 .fileType(file.getContentType())
                 .fileSize(file.getSize())
+                .parsedContent(extractedText)
                 .candidate(candidate)
                 .build();
         resumeRepository.save(resume);

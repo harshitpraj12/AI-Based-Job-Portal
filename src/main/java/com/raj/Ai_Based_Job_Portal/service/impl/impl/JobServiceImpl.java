@@ -14,6 +14,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.VectorStore;
+
+import java.util.Map;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +28,7 @@ public class JobServiceImpl implements JobService {
     private final CompanyRepository companyRepository;
     private final JobSpecification jobSpecification;
     private final JobApplicationRepository jobApplicationRepository;
+    private final VectorStore vectorStore;
 
     @Override
     public JobResponseDto createJob(JobRequestDto request) {
@@ -38,6 +44,13 @@ public class JobServiceImpl implements JobService {
                 .salary(request.getSalary())
                 .build();
         Job saveJob = jobRepository.save(job);
+        
+        // Save to VectorStore
+        String content = "Title: " + saveJob.getTitle() + "\nDescription: " + saveJob.getDescription() + 
+                         "\nSkills: " + saveJob.getSkillRequirement() + "\nLocation: " + saveJob.getLocation();
+        Document document = new Document(saveJob.getId().toString(), content, Map.of("jobId", saveJob.getId()));
+        vectorStore.add(List.of(document));
+
         return JobResponseDto.builder()
                 .id(saveJob.getId())
                 .title(saveJob.getTitle())
@@ -98,6 +111,13 @@ public class JobServiceImpl implements JobService {
         job.setSalary(request.getSalary());
 
         Job updatedJob = jobRepository.save(job);
+
+        // Update in VectorStore
+        String content = "Title: " + updatedJob.getTitle() + "\nDescription: " + updatedJob.getDescription() + 
+                         "\nSkills: " + updatedJob.getSkillRequirement() + "\nLocation: " + updatedJob.getLocation();
+        Document document = new Document(updatedJob.getId().toString(), content, Map.of("jobId", updatedJob.getId()));
+        vectorStore.add(List.of(document));
+
         return JobResponseDto.builder()
                 .id(updatedJob.getId())
                 .title(updatedJob.getTitle())
@@ -149,6 +169,7 @@ public class JobServiceImpl implements JobService {
         Job job = jobRepository.findById(id).orElseThrow();
         jobApplicationRepository.findByJob(job);
         jobRepository.deleteById(id);
+        vectorStore.delete(List.of(id.toString()));
         return "Job deleted Successfully";
     }
 }

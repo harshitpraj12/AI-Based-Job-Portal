@@ -49,10 +49,10 @@ public class AiController {
                                         )
                         );
 
-        String resumeText =
-                pdfService.extractText(
-                        resume.getFilePath()
-                );
+        String resumeText = resume.getParsedContent();
+        if (resumeText == null || resumeText.isEmpty()) {
+            resumeText = pdfService.extractText(resume.getFilePath());
+        }
         System.out.println("Resume Text : "+ resumeText);
         return resumeFeedbackService.analyseResume(resumeText);
     }
@@ -71,8 +71,10 @@ public class AiController {
         User candidate = authenticatedUserService.getCurrentUser();
         Resume resume = resumeRepository.findByCandidate(candidate)
                         .orElseThrow(() -> new RuntimeException("Resume not found"));
-        String resumeText = pdfService.extractText(resume.getFilePath());
-        List<Job> jobs = jobRepository.findAll();
-        return resumeFeedbackService.recommendJobs(resumeText, jobs);
+        String resumeText = resume.getParsedContent();
+        if (resumeText == null || resumeText.isEmpty()) {
+            resumeText = pdfService.extractText(resume.getFilePath());
+        }
+        return resumeFeedbackService.recommendJobs(resumeText);
     }
 }

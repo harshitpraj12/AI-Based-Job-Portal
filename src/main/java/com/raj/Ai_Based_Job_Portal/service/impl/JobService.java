@@ -2,7 +2,7 @@ package com.raj.Ai_Based_Job_Portal.service.impl;
 
 import com.raj.Ai_Based_Job_Portal.dto.JobRequestDto;
 import com.raj.Ai_Based_Job_Portal.dto.JobResponseDto;
-import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.domain.Page;
 
 import java.util.List;

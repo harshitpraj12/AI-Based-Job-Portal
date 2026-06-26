@@ -10,5 +10,5 @@ import java.util.List;
 public interface ResumeFeedbackService {
     ResumeFeedbackResponse analyseResume(String resumeText);
     InterviewQuestionResponse generateInterviewQuestions(String jobTitle, String jobDescription);
-    List<JobRecommendationDto> recommendJobs(String resumeText, List<Job> jobs);
+    List<JobRecommendationDto> recommendJobs(String resumeText);
 }
