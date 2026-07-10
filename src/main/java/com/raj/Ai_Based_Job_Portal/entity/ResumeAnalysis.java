@@ -28,6 +28,7 @@ public class ResumeAnalysis {
 
     @OneToOne
     @JoinColumn(name = "application_id")
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private JobApplication application;
 
 }

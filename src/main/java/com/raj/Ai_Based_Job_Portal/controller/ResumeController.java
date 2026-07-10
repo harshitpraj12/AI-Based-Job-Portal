@@ -27,6 +27,46 @@ public class ResumeController {
         return "Resume uploaded successfully";
     }
 
+    @GetMapping("/my-resume")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ResponseEntity<com.raj.Ai_Based_Job_Portal.dto.ResumeResponseDto> getMyResumeDetails() {
+        com.raj.Ai_Based_Job_Portal.dto.ResumeResponseDto details = resumeService.getResumeDetails();
+        if (details == null) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(details);
+    }
+
+    @GetMapping("/my-resume/download")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ResponseEntity<Resource> downloadMyResume() throws MalformedURLException {
+        try {
+            Resource resource = resumeService.downloadMyResume();
+            String filename = resource.getFilename() != null ? resource.getFilename() : "resume.pdf";
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                    .body(resource);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/my-resume/preview")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ResponseEntity<Resource> previewMyResume() throws MalformedURLException {
+        try {
+            Resource resource = resumeService.downloadMyResume();
+            String filename = resource.getFilename() != null ? resource.getFilename() : "resume.pdf";
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                    .body(resource);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
     @GetMapping("/download/{candidateId}")
     @PreAuthorize("hasRole('RECRUITER')")
     public ResponseEntity<Resource> downloadResume(@PathVariable Long candidateId) throws MalformedURLException {
@@ -72,6 +112,17 @@ public class ResumeController {
         } catch (Exception e) {
             // Fallback for handling MalformedURLException or RuntimeExceptions cleanly
             return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @DeleteMapping("/my-resume")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public ResponseEntity<String> deleteMyResume() {
+        try {
+            resumeService.deleteMyResume();
+            return ResponseEntity.ok("Resume deleted successfully");
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Failed to delete resume: " + e.getMessage());
         }
     }
 }

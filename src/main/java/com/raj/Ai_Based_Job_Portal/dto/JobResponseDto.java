@@ -14,4 +14,5 @@ public class JobResponseDto {
     private Integer experience;
     private String skillsRequires;
     private String companyName;
+    private Long companyId;
 }

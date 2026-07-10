@@ -78,7 +78,8 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     @Override
     public List<JobApplication> getAllJobs() {
-        return jobApplicationRepository.findAll();
+        User recruiter = authenticatedUserService.getCurrentUser();
+        return jobApplicationRepository.findByJobCompanyRecruiterId(recruiter.getId());
     }
 
     @Override
@@ -153,7 +154,8 @@ public class ApplicationServiceImpl implements ApplicationService {
                     .orElse(null);
 
             ApplicantResponseDto applicantResponseDto = ApplicantResponseDto.builder()
-                    .candidateId(application.getId())
+                    .applicationId(application.getId())
+                    .candidateId(application.getCandidate().getId())
                     .email(application.getCandidate().getEmail())
                     .status(application.getStatus().toString())
                     .candidateName(application.getCandidate().getName())

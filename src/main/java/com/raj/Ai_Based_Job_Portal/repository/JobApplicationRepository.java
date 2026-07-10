@@ -13,4 +13,7 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
     List<JobApplication> findByCandidate(User candidate);
     List<JobApplication> findByJob(Job job);
     boolean existsByJobAndCandidate(Job job, User candidate);
+
+    @org.springframework.data.jpa.repository.Query("SELECT ja FROM JobApplication ja WHERE ja.job.company.recruiter.id = :recruiterId")
+    List<JobApplication> findByJobCompanyRecruiterId(@org.springframework.data.repository.query.Param("recruiterId") Long recruiterId);
 }

@@ -1,7 +1,7 @@
 # AI-Based Job Portal
 
 [![Java Version](https://img.shields.io/badge/Java-25-orange.svg?style=for-the-badge&logo=openjdk)](https://openjdk.org/)
-[![Spring Boot Version](https://img.shields.io/badge/Spring--Boot-4.0.6-brightgreen.svg?style=for-the-badge&logo=springboot)](https://spring.io/projects/spring-boot)
+[![Spring Boot Version](https://img.shields.io/badge/Spring--Boot-3.3.4-brightgreen.svg?style=for-the-badge&logo=springboot)](https://spring.io/projects/spring-boot)
 [![Build Tool](https://img.shields.io/badge/Maven-3.8%2B-blue.svg?style=for-the-badge&logo=apachemaven)](https://maven.apache.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge&logo=github)](https://opensource.org/licenses/MIT)
 
@@ -23,33 +23,23 @@ An intelligent, full-stack recruitment portal featuring automated AI resume scre
 
 ## 🏗️ Architecture & Project Directory Structure
 
-The system utilizes a **Layered Architecture** split into a decoupled Spring Boot backend server and a Vite React frontend application. Data flows from HTTP controllers down to the service implementation classes and JPA repositories.
+The system utilizes a **Layered Architecture** for the Spring Boot backend server. Data flows from HTTP controllers down to the service implementation classes and JPA repositories.
 
 ```text
-JobPortal/
-├── Backend/                       # Spring Boot Application
-│   ├── src/main/java/com/raj/Ai_Based_Job_Portal/
-│   │   ├── config/                # CORS configurations & global security filters
-│   │   ├── controller/            # REST API endpoints (Auth, Jobs, Email, Resumes)
-│   │   ├── dto/                   # Request/Response Data Transfer Objects
-│   │   ├── entity/                # JPA Database Entities (User, Job, JobApplication)
-│   │   ├── enums/                 # Application status and role definitions
-│   │   ├── mapper/                # Object mapping logic
-│   │   ├── repository/            # Spring Data JPA Repository interfaces
-│   │   ├── security/              # JWT Token filter and user details service
-│   │   └── service/impl/          # Business interfaces & implementations (.impl.impl)
-│   ├── src/main/resources/
-│   │   ├── application.properties # Main application properties (MySQL, Mail, Ollama)
-│   │   └── uploads/               # Directory for storing candidate resume PDFs
-│   └── pom.xml                    # Maven dependency descriptor
-└── Frontend/                      # React SPA Application
-    ├── src/
-    │   ├── components/            # Reusable UI components
-    │   ├── pages/                 # Recruiter and Candidate UI views
-    │   ├── routes/                # Client routing logic
-    │   └── services/              # API Axios clients & offline mock fallback handlers
-    ├── package.json               # Node packaging descriptor
-    └── vite.config.js             # Vite configuration
+Ai-Based-Job-Portal/
+├── src/main/java/com/raj/Ai_Based_Job_Portal/
+│   ├── config/                # Spring AI, OpenAPI & global security configurations
+│   ├── controller/            # REST API endpoints (Auth, Jobs, Email, Resumes, AI)
+│   ├── dto/                   # Request/Response Data Transfer Objects
+│   ├── entity/                # JPA Database Entities (User, Job, Resume)
+│   ├── repository/            # Spring Data JPA Repository interfaces
+│   ├── security/              # JWT Token filter and user details service
+│   └── service/impl/          # Business interfaces & implementations
+├── src/main/resources/
+│   ├── application.properties # Main application properties (MySQL, MariaDB Vector Store, Mail, Ollama)
+│   └── uploads/               # Directory for storing candidate resume PDFs
+├── docker-compose.yml         # Docker compose for DB infrastructure
+└── pom.xml                    # Maven dependency descriptor
 ```
 
 ---
@@ -58,10 +48,10 @@ JobPortal/
 
 ### Prerequisites
 Make sure you have the following installed on your machine:
-*   **JDK 25** (the project is configured for Java 25 compatibility)
+*   **JDK 17 or 25** (the project is compatible with recent Java versions)
 *   **Maven 3.8+**
-*   **Node.js (v18+)** and npm
 *   **MySQL Server (v8.0+)**
+*   **MariaDB Server (v11.3+)** (for the AI Vector Store) or **Docker**
 *   **Ollama CLI** (running locally)
 
 ---
@@ -74,10 +64,15 @@ Make sure you have the following installed on your machine:
     cd job-portal
     ```
 
-2.  **Set Up MySQL Database:**
-    Open your database shell or query editor and run:
+2.  **Set Up Databases:**
+    You need both a standard relational database (MySQL) and a vector database (MariaDB). You can use the provided Docker Compose file:
+    ```bash
+    docker-compose up -d
+    ```
+    Or manually create them in your local servers:
     ```sql
-    CREATE DATABASE jobportal;
+    CREATE DATABASE jobportal; /* On MySQL port 3306 */
+    CREATE DATABASE vectordb;  /* On MariaDB port 3307 */
     ```
 
 3.  **Run Ollama Local LLM:**
@@ -86,13 +81,19 @@ Make sure you have the following installed on your machine:
     ollama run llama3.2
     ```
 
-4.  **Configure Backend Properties:**
-    Modify the configuration in `Backend/src/main/resources/application.properties`:
+4.  **Configure Application Properties:**
+    Modify the configuration in `src/main/resources/application.properties`:
     ```properties
-    # Database Configuration
+    # MySQL Database Configuration
     spring.datasource.url=jdbc:mysql://localhost:3306/jobportal?createDatabaseIfNotExist=true
-    spring.datasource.username=YOUR_MYSQL_USERNAME
-    spring.datasource.password=YOUR_MYSQL_PASSWORD
+    spring.datasource.username=root
+    spring.datasource.password=Harshit@1
+
+    # MariaDB Vector Store Configuration
+    spring.vector.datasource.url=jdbc:mariadb://localhost:3307/vectordb?createDatabaseIfNotExist=true
+    spring.vector.datasource.username=root
+    spring.vector.datasource.password=Harshit@1
+    spring.ai.vectorstore.mariadb.initialize-schema=true
 
     # JWT Lifespan
     jwt.secret=your_super_secret_key_at_least_32_characters_long
@@ -107,26 +108,14 @@ Make sure you have the following installed on your machine:
     spring.mail.port=587
     spring.mail.username=YOUR_GMAIL_USERNAME
     spring.mail.password=YOUR_GMAIL_APP_PASSWORD
-    spring.mail.properties.mail.smtp.auth=true
-    spring.mail.properties.mail.smtp.starttls.enable=true
     ```
 
-5.  **Build & Run Backend:**
-    Navigate to the `Backend` directory and start the server:
+5.  **Build & Run Application:**
+    Use the Maven wrapper to start the server:
     ```bash
-    cd Backend
     ./mvnw spring-boot:run
     ```
-    The server will boot on port `8080`.
-
-6.  **Run Frontend:**
-    Navigate to the `Frontend` directory, install packages, and launch:
-    ```bash
-    cd ../Frontend
-    npm install
-    npm run dev
-    ```
-    Open your browser to `http://localhost:5173`.
+    The server will boot on port `8080`. Swagger UI will be available at `http://localhost:8080/swagger-ui.html`.
 
 ---
 
@@ -148,21 +137,17 @@ All API endpoints are prefixed with `/api` and require a `Bearer <token>` in the
 
 ## 🐳 Docker Support
 
-To run the backend inside a Docker container:
+To run the application inside a Docker container:
 
-1.  **Create a Dockerfile in `/Backend`:**
-    ```dockerfile
-    FROM openjdk:25-slim
-    WORKDIR /app
-    COPY target/*.jar app.jar
-    ENTRYPOINT ["java", "-jar", "app.jar"]
-    ```
-
-2.  **Build and Run:**
+1.  **Build the Jar & Docker Image:**
     ```bash
-    cd Backend
     ./mvnw package -DskipTests
     docker build -t jobportal-backend:latest .
+    ```
+
+2.  **Run the Container:**
+    Make sure your databases are running and accessible (you may need to configure Docker network settings so the app can reach `localhost` services):
+    ```bash
     docker run -d -p 8080:8080 --name jobportal-app jobportal-backend:latest
     ```
 
@@ -173,11 +158,9 @@ To run the backend inside a Docker container:
 Verify service behavior and unit tests using the Maven wrapper:
 ```bash
 # Unix/MacOS
-cd Backend
 ./mvnw clean test
 
 # Windows
-cd Backend
 mvnw.cmd clean test
 ```
 

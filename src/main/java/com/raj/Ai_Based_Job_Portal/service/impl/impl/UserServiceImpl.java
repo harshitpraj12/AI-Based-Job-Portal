@@ -4,6 +4,7 @@ import com.raj.Ai_Based_Job_Portal.dto.EducationDto;
 import com.raj.Ai_Based_Job_Portal.dto.ProfileUpdateRequest;
 import com.raj.Ai_Based_Job_Portal.dto.ProfileUpdateResponse;
 import com.raj.Ai_Based_Job_Portal.dto.ProjectDto;
+import com.raj.Ai_Based_Job_Portal.dto.UserProfileResponseDto;
 import com.raj.Ai_Based_Job_Portal.entity.User;
 import com.raj.Ai_Based_Job_Portal.entity.UserEducation;
 import com.raj.Ai_Based_Job_Portal.entity.UserProfile;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -100,4 +102,50 @@ public class UserServiceImpl implements UserService {
                 .projects(request.getProjects())
                 .build();
     }
+
+    @Override
+    @Transactional
+    public UserProfileResponseDto getProfile() {
+        User user = currentUser.getCurrentUser();
+        UserProfile profile = user.getProfile();
+
+        List<EducationDto> educationDtos = user.getEducations() != null
+                ? user.getEducations().stream().map(edu -> {
+                    EducationDto dto = new EducationDto();
+                    dto.setCollegeName(edu.getCollegeName());
+                    dto.setDegree(edu.getDegree());
+                    dto.setMarks(edu.getMarks());
+                    dto.setStartDate(edu.getStartDate());
+                    dto.setEndDate(edu.getEndDate());
+                    return dto;
+                }).collect(Collectors.toList())
+                : new ArrayList<>();
+
+        List<ProjectDto> projectDtos = user.getProjects() != null
+                ? user.getProjects().stream().map(proj -> {
+                    ProjectDto dto = new ProjectDto();
+                    dto.setName(proj.getName());
+                    dto.setStartDate(proj.getStartDate());
+                    dto.setEndDate(proj.getEndDate());
+                    dto.setDetails(proj.getDetails());
+                    dto.setUrl(proj.getUrl());
+                    return dto;
+                }).collect(Collectors.toList())
+                : new ArrayList<>();
+
+        return UserProfileResponseDto.builder()
+                .id(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .role(user.getRole().name())
+                .mobile(profile != null ? profile.getMobile() : null)
+                .address(profile != null ? profile.getAddress() : null)
+                .gender(profile != null ? profile.getGender() : null)
+                .dob(profile != null ? profile.getDob() : null)
+                .socialMedia(profile != null ? profile.getSocialMedia() : new ArrayList<>())
+                .educations(educationDtos)
+                .projects(projectDtos)
+                .build();
+    }
 }
+

@@ -10,6 +10,5 @@ import java.util.List;
 
 @Repository
 public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificationExecutor<Job> {
-//    JobResponseDto getJobById(Long id);
-//    List<JobResponseDto> getAllJobs();
+    List<Job> findByCompanyRecruiterId(Long recruiterId);
 }

@@ -28,6 +28,9 @@ public class JobApplication {
 
     private LocalDateTime appliedAt;
 
+    @OneToOne(mappedBy = "application", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    private ResumeAnalysis resumeAnalysis;
+
     @Enumerated(EnumType.STRING)
     private ApplicationStatus status;
 }

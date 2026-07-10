@@ -70,4 +70,40 @@ public class ResumeServiceImpl implements ResumeService {
         Resource resource = new UrlResource(path.toUri());
         return resource;
     }
+
+    @Override
+    public com.raj.Ai_Based_Job_Portal.dto.ResumeResponseDto getResumeDetails() {
+        User candidate = authenticatedUserService.getCurrentUser();
+        Optional<Resume> resumeOpt = resumeRepository.findByCandidate(candidate);
+        if (resumeOpt.isPresent()) {
+            Resume resume = resumeOpt.get();
+            return com.raj.Ai_Based_Job_Portal.dto.ResumeResponseDto.builder()
+                    .id(resume.getId())
+                    .fileName(resume.getFileName())
+                    .fileType(resume.getFileType())
+                    .fileSize(resume.getFileSize())
+                    .build();
+        }
+        return null;
+    }
+
+    @Override
+    public Resource downloadMyResume() throws MalformedURLException {
+        User candidate = authenticatedUserService.getCurrentUser();
+        return downloadResume(candidate.getId());
+    }
+
+    @Override
+    public void deleteMyResume() throws IOException {
+        User candidate = authenticatedUserService.getCurrentUser();
+        Resume resume = resumeRepository.findByCandidate(candidate)
+                .orElseThrow(() -> new RuntimeException("Resume not found"));
+        
+        // Delete file from filesystem
+        Path path = Paths.get(resume.getFilePath());
+        Files.deleteIfExists(path);
+        
+        // Delete database record
+        resumeRepository.delete(resume);
+    }
 }

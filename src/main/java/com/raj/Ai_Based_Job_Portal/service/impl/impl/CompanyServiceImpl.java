@@ -47,7 +47,8 @@ public class CompanyServiceImpl implements CompanyService {
 
     @Override
     public List<CompanyResponseDto> getAllCompanies() {
-        List<Company> companies = companyRepository.findAll();
+        User recruiter = userService.getCurrentUser();
+        List<Company> companies = companyRepository.findByRecruiterId(recruiter.getId());
         List<CompanyResponseDto> companyResponseDto = new ArrayList<>();
         for(Company company : companies){
             CompanyResponseDto dto = CompanyResponseDto.builder()

@@ -32,6 +32,29 @@ public class ResumeFeedbackServiceImpl implements ResumeFeedbackService {
         this.jobRepository = jobRepository;
     }
 
+    private ResumeFeedbackResponse parseResponse(String rawContent) {
+        if (rawContent == null) {
+            throw new RuntimeException("Null response from LLM");
+        }
+        String cleanJson = rawContent.trim();
+        if (cleanJson.contains("```")) {
+            int start = cleanJson.indexOf('{');
+            int end = cleanJson.lastIndexOf('}');
+            if (start != -1 && end != -1 && end > start) {
+                cleanJson = cleanJson.substring(start, end + 1);
+            } else {
+                cleanJson = cleanJson.replace("```json", "").replace("```", "").trim();
+            }
+        }
+        try {
+            return objectMapper.readValue(cleanJson, ResumeFeedbackResponse.class);
+        } catch (Exception e) {
+            System.err.println("JSON parsing failed for: " + cleanJson);
+            e.printStackTrace();
+            throw new RuntimeException("Failed to parse AI response: " + e.getMessage());
+        }
+    }
+
     @Override
     public ResumeFeedbackResponse analyseResume(String resumeText) {
         System.out.println("resume service is running");
@@ -41,53 +64,38 @@ public class ResumeFeedbackServiceImpl implements ResumeFeedbackService {
             Analyze the following resume text and evaluate its strengths, weaknesses, and actionable suggestions for improvement. Provide an overall score out of 100.
             
             Analyze this resume text:
-
             %s
             """
                 .formatted(resumeText);
         System.out.println("This is prompt : "+ prompt);
-        ResumeFeedbackResponse entity = chatClient.prompt(prompt)
+        String response = chatClient.prompt(prompt)
+                .call()
+                .content();
+        System.out.println("Your response is : " + response);
+        return parseResponse(response);
+    }
+
+    @Override
+    public ResumeFeedbackResponse analyseResumeAndJob(String resumeText, String description) {
+        System.out.println("resume analyse with job description service is running");
+        String prompt = """
+            You are an expert resume reviewer.
+            
+            Analyze the following resume text and evaluate its strengths, weaknesses, and actionable suggestions for improvement relative to the job description. Provide an overall score out of 100.
+            
+            Analyze this resume text:
+            %s
+            
+            According to this job description:
+            %s
+            """
+                .formatted(resumeText, description);
+        System.out.println("This is prompt : "+ prompt);
+        var response = chatClient.prompt(prompt)
                 .call()
                 .entity(ResumeFeedbackResponse.class);
-        System.out.println("Your response is : "+entity.toString());
-        return entity;
-
-//        String prompt = """
-//                You are an expert resume reviewer.
-//
-//                            Analyze this resume:
-//
-//                            %s
-//
-//                            use exactly these JSON keys.
-//
-//                            {
-//                                "overallScore":85,
-//                                "strengths":[
-//                                    "Strong Java skills", "Good communications"
-//                                ],
-//                                "weaknesses":[
-//                                    "No deployment experience", "No projects"
-//                                ],
-//                                "suggestions":[
-//                                    "Add Docker projects", "Add a strong project"
-//                                ]
-//                            }
-//                """.formatted(resumeText);
-//        try {
-//            String rawJson = this.chatClient.prompt()
-//                    .user(prompt)
-//                    .call()
-//                    .content();
-//            rawJson = rawJson.replace("```json", "").replace("```", "").trim();
-//            System.out.println("---------------");
-//            System.out.println(rawJson);
-//            System.out.println("---------------");
-//            return objectMapper.readValue(rawJson, ResumeFeedbackResponse.class);
-//        }catch (Exception e){
-//            e.printStackTrace();
-//            throw new RuntimeException("Failed to map to json");
-//        }
+        System.out.println("Your response is : " + response.toString());
+        return response;
     }
 
     @Override
@@ -125,7 +133,12 @@ public class ResumeFeedbackServiceImpl implements ResumeFeedbackService {
     @Override
     public List<JobRecommendationDto> recommendJobs(String resumeText) {
         // Step 1: Perform Vector Search to find Top 5 matching jobs based on Resume Text
-        List<Document> matchingDocuments = vectorStore.similaritySearch(SearchRequest.query(resumeText).withTopK(5));
+        SearchRequest request = SearchRequest.builder()
+                .topK(5)
+                .similarityThreshold(0.5)
+                .query(resumeText)
+                .build();
+        List<Document> matchingDocuments = vectorStore.similaritySearch(request);
         
         List<Long> jobIds = matchingDocuments.stream()
                 .map(doc -> Long.valueOf(doc.getMetadata().get("jobId").toString()))

@@ -10,6 +10,7 @@ public class ApplicantResponseDto {
     private String email;
     private String status;
     private Long candidateId;
+    private Long applicationId;
     private Integer matchScore;
     private String strengths;
     private String missingSkills;

@@ -9,6 +9,7 @@ import java.util.List;
 
 public interface ResumeFeedbackService {
     ResumeFeedbackResponse analyseResume(String resumeText);
+    ResumeFeedbackResponse analyseResumeAndJob(String resumeText, String description);
     InterviewQuestionResponse generateInterviewQuestions(String jobTitle, String jobDescription);
     List<JobRecommendationDto> recommendJobs(String resumeText);
 }

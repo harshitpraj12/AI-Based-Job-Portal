@@ -2,7 +2,7 @@ package com.raj.Ai_Based_Job_Portal.service.impl.impl;
 
 import com.raj.Ai_Based_Job_Portal.dto.ResumeAnalysisResponse;
 import com.raj.Ai_Based_Job_Portal.service.impl.AiResumeService;
-import lombok.RequiredArgsConstructor;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 
@@ -10,11 +10,34 @@ import org.springframework.stereotype.Service;
 public class AiResumeServiceImpl implements AiResumeService {
 
     private final ChatClient chatClient;
+    private final ObjectMapper objectMapper;
 
-    // 1. Inject the ChatClient.Builder bean that Spring AI provides automatically
-    public AiResumeServiceImpl(ChatClient.Builder chatClientBuilder) {
-        // 2. Build the ChatClient instance here
+    public AiResumeServiceImpl(ChatClient.Builder chatClientBuilder, ObjectMapper objectMapper) {
         this.chatClient = chatClientBuilder.build();
+        this.objectMapper = objectMapper;
+    }
+
+    private ResumeAnalysisResponse parseResponse(String rawContent) {
+        if (rawContent == null) {
+            throw new RuntimeException("Null response from LLM");
+        }
+        String cleanJson = rawContent.trim();
+        if (cleanJson.contains("```")) {
+            int start = cleanJson.indexOf('{');
+            int end = cleanJson.lastIndexOf('}');
+            if (start != -1 && end != -1 && end > start) {
+                cleanJson = cleanJson.substring(start, end + 1);
+            } else {
+                cleanJson = cleanJson.replace("```json", "").replace("```", "").trim();
+            }
+        }
+        try {
+            return objectMapper.readValue(cleanJson, ResumeAnalysisResponse.class);
+        } catch (Exception e) {
+            System.err.println("JSON parsing failed for: " + cleanJson);
+            e.printStackTrace();
+            throw new RuntimeException("Failed to parse ATS response: " + e.getMessage());
+        }
     }
 
     @Override
@@ -26,19 +49,20 @@ public class AiResumeServiceImpl implements AiResumeService {
                 %s
                 Job Description:
                 %s
-                Return Only JSON:
+                Return Only JSON in the exact format:
                 {
-                    "matchScore":80,
-                    "strength":"Java, Spring Boot",
-                    "missingSkills":"Docker",
-                    "suggestions":"Learn Docker"
+                    "matchScore": 80,
+                    "strength": "Java, Spring Boot",
+                    "missingSkills": "Docker",
+                    "suggestion": "Learn Docker"
                 }
                 """
                 .formatted(resumeTest, jobDescription);
 
-        return chatClient.prompt()
+        String response = chatClient.prompt()
                 .user(prompt)
                 .call()
-                .entity(ResumeAnalysisResponse.class);
+                .content();
+        return parseResponse(response);
     }
 }

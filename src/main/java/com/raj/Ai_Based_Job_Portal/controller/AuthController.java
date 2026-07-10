@@ -28,4 +28,9 @@ public class AuthController {
     public ResponseEntity<LoginResponseDto> login(@Valid @RequestBody LoginRequestDto requestDto){
         return ResponseEntity.ok(authService.login(requestDto));
     }
+
+    @org.springframework.web.bind.annotation.GetMapping("/test")
+    public ResponseEntity<String> testAuth(org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.ok("Authenticated as: " + auth.getName());
+    }
 }
